@@ -15,17 +15,33 @@ const TRACKS = [
     id: 3,
     title: "MEM_LEAK_DETECTED",
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+  },
+  {
+    id: 4,
+    title: "CYBER_GHOST_DAT",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+  },
+  {
+    id: 5,
+    title: "ROOTKIT_INITIALIZED",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
   }
 ];
 
 export default function MusicPlayer() {
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTrackId, setCurrentTrackId] = useState(TRACKS[0].id);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [progress, setProgress] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const audioRef = useRef<HTMLAudioElement>(null);
-  const currentTrack = TRACKS[currentTrackIndex];
+  
+  const filteredTracks = TRACKS.filter(t => 
+    t.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const currentTrack = TRACKS.find(t => t.id === currentTrackId) || TRACKS[0];
 
   useEffect(() => {
     if (audioRef.current) {
@@ -40,7 +56,7 @@ export default function MusicPlayer() {
         setIsPlaying(false);
       });
     }
-  }, [currentTrackIndex]);
+  }, [currentTrackId]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -54,12 +70,18 @@ export default function MusicPlayer() {
   };
 
   const playNext = () => {
-    setCurrentTrackIndex((prev) => (prev + 1) % TRACKS.length);
+    const listToUse = filteredTracks.length > 0 ? filteredTracks : TRACKS;
+    const currentIndex = listToUse.findIndex(t => t.id === currentTrackId);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % listToUse.length : 0;
+    setCurrentTrackId(listToUse[nextIndex].id);
     setIsPlaying(true);
   };
 
   const playPrev = () => {
-    setCurrentTrackIndex((prev) => (prev - 1 + TRACKS.length) % TRACKS.length);
+    const listToUse = filteredTracks.length > 0 ? filteredTracks : TRACKS;
+    const currentIndex = listToUse.findIndex(t => t.id === currentTrackId);
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : listToUse.length - 1;
+    setCurrentTrackId(listToUse[prevIndex].id);
     setIsPlaying(true);
   };
 
@@ -76,7 +98,7 @@ export default function MusicPlayer() {
   return (
     <div className="w-full p-6 bg-black border-4 border-cyan-500 relative">
       <div className="absolute top-0 left-0 bg-cyan-500 text-black font-pixel text-[10px] px-2 py-1">
-        AUDIO_MODULE_v2.4
+        AUDIO_MODULE_v3.0
       </div>
       
       <audio 
@@ -95,10 +117,48 @@ export default function MusicPlayer() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-4">
+        <div className="flex items-center bg-black border-2 border-cyan-500 p-2 focus-within:border-fuchsia-500 transition-colors">
+          <span className="text-fuchsia-500 font-pixel text-xs mr-2 mt-0.5">&gt;</span>
+          <input
+            type="text"
+            className="bg-transparent border-none outline-none text-cyan-400 font-mono text-sm w-full uppercase placeholder-cyan-800"
+            placeholder="SEARCH_TRACK..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Track List */}
+      <div className="mb-6 h-32 overflow-y-auto border-2 border-cyan-500 p-2 bg-black/50 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-black [&::-webkit-scrollbar-thumb]:bg-cyan-500">
+        {filteredTracks.length > 0 ? (
+          filteredTracks.map(track => (
+            <div 
+              key={track.id} 
+              onClick={() => {
+                setCurrentTrackId(track.id);
+                setIsPlaying(true);
+              }}
+              className={`font-mono text-sm cursor-pointer p-1 truncate hover:bg-cyan-900/40 transition-colors ${
+                track.id === currentTrackId 
+                  ? 'text-fuchsia-500 font-bold bg-fuchsia-900/20' 
+                  : 'text-cyan-600'
+              }`}
+            >
+              [{track.id.toString().padStart(2, '0')}] {track.title} {track.id === currentTrackId && (isPlaying ? ' (PLAYING)' : ' (PAUSED)')}
+            </div>
+          ))
+        ) : (
+          <div className="font-mono text-sm text-red-500 p-1 animate-pulse">ERR: NO_MATCH_FOUND</div>
+        )}
+      </div>
+
       {/* Raw Progress Bar */}
       <div className="w-full h-4 border-2 border-cyan-500 mb-6 relative">
         <div 
-          className="h-full bg-fuchsia-500"
+          className="h-full bg-fuchsia-500 transition-all duration-100 ease-linear"
           style={{ width: `${progress}%` }}
         />
       </div>
